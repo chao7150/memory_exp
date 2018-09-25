@@ -25,11 +25,11 @@ const actions = {
       const digit = String(Math.floor(Math.random() * 10))
       newNumber += digit
     }
-    setTimeout(actions.endMemorize, 1000)
+    setTimeout(actions.endMemorize, 3000)
     return { ...state, presentation: newNumber, inputBox: "" }
   },
   endMemorize: () => (state, actions) => {
-    setTimeout(actions.startAnswer, 1000)
+    setTimeout(actions.startAnswer, 5000)
     return { ...state, visibility: "hidden" }
   },
   startAnswer: () => state => {
@@ -71,7 +71,7 @@ const actions = {
       const memCap = actions.calcMemCap(state.log)
       return { ...state, result: actions.createCSV(state.log.concat([["capacity", memCap]])) }
     } else {
-      setTimeout(actions.startMemorize, 1000)
+      setTimeout(actions.startMemorize, 3000)
       return state
     }
   },
