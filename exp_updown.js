@@ -1,8 +1,9 @@
 const { h, app } = hyperapp
 
+// 実験のパラメータを决める
 const settings = {
   initialDifficulty: 4,
-  trials: 5
+  series: 20
 }
 
 const state = {
@@ -55,7 +56,7 @@ const actions = {
       state.numberOfDigits,
       correct ? 1 : 0
     ]
-    const nextSeriesType = actions.switchSeriesType(correct)
+    const nextSeriesType = actions.switchSeriesType([correct, state.numberOfDigits])
     state = {
       ...state,
       trialNum: state.trialNum + 1,
@@ -67,7 +68,7 @@ const actions = {
       readonly: "readonly",
       seriesNum: state.seriesNum + (nextSeriesType != state.seriesType ? 1 : 0),
     }
-    if (state.seriesNum > settings.trials) {
+    if (state.seriesNum > settings.series) {
       const memCap = actions.calcMemCap(state.log)
       return { ...state, result: actions.createCSV(state.log.concat([["capacity", memCap]])) }
     } else {
@@ -76,9 +77,15 @@ const actions = {
     }
   },
   createCSV: array2d => array2d.map(row => row.join(",")).join("\r\n"),
-  switchSeriesType: correct => state => {
+  switchSeriesType: args => state => {
+    const correct = args[0]
+    const latestNoD = args[1]
     if (state.trialNum == 1) {
       return state.seriesType
+    }
+    // 文字数が0にならないようにする
+    if (latestNoD == 1) {
+        return 1
     }
     if (state.seriesType == 1 && state.log[state.log.length - 1][5] == 0 && !correct) {
       return -1
@@ -90,17 +97,24 @@ const actions = {
   },
   calcMemCap: logs => {
     var sum = 0
-    for (let i = 1; i <= settings.trials; i++) {
+    for (let i = 1; i <= settings.series; i++) {
       const thisSeries = logs.filter(log => log[1] == i)
       sum += actions.calcReprOfSeries(thisSeries)
     }
-    return sum / settings.trials
+    return sum / settings.series
   },
+  // その系列の代表値を計算する
   calcReprOfSeries: thisSeries => {
     const correctTrials = thisSeries.filter(trial => trial[5] == 1)
+    // 系列内に正解が1つもない場合
     if (correctTrials.length == 0) {
-      return thisSeries[0][4] - 1
-    } else {
+      // 2連続不正解の上昇系列では系列内第1試行より1つ少ない桁数を返すこととする
+      if (thisSeries[0][1] == 1){
+        return thisSeries[0][4] - 1
+      } else { // 桁数が1になるまで不正解を続けた下降系列は0を返すこととする
+        return 0
+      }
+    } else {  // 上記の特殊例以外は系列内で正解したもっとも大きい桁数を返す
       return Math.max(...correctTrials.map(trial => trial[4]))
     }
   },
@@ -126,6 +140,7 @@ const view = (state, actions) => (
       })
     ]),
     h("br"),
+    h("p", {}, state.result ? "このページを離れる前に必ず以下のデータを保存してください。メモ帳等のテキストエディタに貼り付けて拡張子を.csvとして保存するとexcelで開けます。" : ""),
     h("pre", {}, state.result)
   ])
 )

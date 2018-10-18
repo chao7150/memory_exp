@@ -122,6 +122,7 @@ const view = (state, actions) => (
         })
       ]),
       h("br"),
+      h("p", {}, state.result ? "このページを離れる前に必ず以下のデータを保存してください。メモ帳等のテキストエディタに貼り付けて拡張子を.csvとして保存するとexcelで開けます。" : ""),
       h("pre", {}, state.result)
     ])
 )
