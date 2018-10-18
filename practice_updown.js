@@ -1,8 +1,11 @@
+// practice
+// L74 is the only difference from honban
+
 const { h, app } = hyperapp
 
 const settings = {
   initialDifficulty: 4,
-  trials: 5
+  trials: 10
 }
 
 const state = {
@@ -55,6 +58,7 @@ const actions = {
       state.numberOfDigits,
       correct ? 1 : 0
     ]
+    console.log(latestTrialLog)
     const nextSeriesType = actions.switchSeriesType(correct)
     state = {
       ...state,
@@ -67,7 +71,8 @@ const actions = {
       readonly: "readonly",
       seriesNum: state.seriesNum + (nextSeriesType != state.seriesType ? 1 : 0),
     }
-    if (state.seriesNum > settings.trials) {
+    // 終了条件
+    if (state.trialNum > settings.trials) {
       const memCap = actions.calcMemCap(state.log)
       return { ...state, result: actions.createCSV(state.log.concat([["capacity", memCap]])) }
     } else {
