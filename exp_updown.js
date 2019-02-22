@@ -3,7 +3,7 @@ const { h, app } = hyperapp
 // 実験のパラメータを决める
 const settings = {
   initialDifficulty: 4,
-  series: 20
+  series: 5,
 }
 
 const state = {
@@ -21,14 +21,10 @@ const state = {
 
 const actions = {
   startMemorize: () => (state, actions) => {
-    let newNumber = ""
-    for (let i = 0; i < state.numberOfDigits; i++) {
-      const digit = String(Math.floor(Math.random() * 10))
-      newNumber += digit
-    }
     setTimeout(actions.endMemorize, 3000)
-    return { ...state, presentation: newNumber, inputBox: "" }
+    return { ...state, presentation: actions.createProgression(state.numberOfDigits), inputBox: "" }
   },
+  createProgression: length => Array.apply(null, {length}).map(() => Math.floor(Math.random() * 10)).join(""),
   endMemorize: () => (state, actions) => {
     setTimeout(actions.startAnswer, 5000)
     return { ...state, visibility: "hidden" }
@@ -48,7 +44,7 @@ const actions = {
     }
     // 正解判定
     const correct = state.presentation == state.inputBox
-    latestTrialLog = [
+    const latestTrialLog = [
       state.trialNum,
       state.seriesNum,
       state.presentation,
@@ -144,6 +140,6 @@ const view = (state, actions) => (
     h("pre", {}, state.result)
   ])
 )
-
-const main = app(state, actions, view, document.body)
-main.startMemorize()
+module.exports = actions
+//const main = app(state, actions, view, document.body)
+//main.startMemorize()
