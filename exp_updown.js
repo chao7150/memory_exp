@@ -15,7 +15,15 @@ const state = {
   trialNum: 1,
   seriesType: 1, // 上昇系列:1, 下降系列:-1
   numberOfDigits: settings.initialDifficulty,
-  log: [["trialNum", "series", "number", "response", "numberOfDigits", "correct"]],
+  log: [{
+    trialNum: "trialNum",
+    seriesNum: "series",
+    seriesType: "seriesType"
+    progression: "progression",
+    response: "response",
+    numberOfDigits: "numberOfDigits",
+    correct: "correct"
+  }],
   seriesNum: 1
 }
 
@@ -24,7 +32,7 @@ const actions = {
     setTimeout(actions.endMemorize, 3000)
     return { ...state, presentation: actions.createProgression(state.numberOfDigits), inputBox: "" }
   },
-  createProgression: length => Array.apply(null, {length}).map(() => Math.floor(Math.random() * 10)).join(""),
+  createProgression: length => Array.apply(null, { length }).map(() => Math.floor(Math.random() * 10)).join(""),
   endMemorize: () => (state, actions) => {
     setTimeout(actions.startAnswer, 5000)
     return { ...state, visibility: "hidden" }
@@ -44,15 +52,16 @@ const actions = {
     }
     // 正解判定
     const correct = state.presentation == state.inputBox
-    const latestTrialLog = [
-      state.trialNum,
-      state.seriesNum,
-      state.presentation,
-      state.inputBox,
-      state.numberOfDigits,
-      correct ? 1 : 0
-    ]
-    const nextSeriesType = actions.switchSeriesType([correct, state.numberOfDigits])
+    const latestTrialLog = {
+      trialNum: state.trialNum,
+      seriesNum: state.seriesNum,
+      seriesType: state.seriesType,
+      progression: state.presentation,
+      response: state.inputBox,
+      numberOfDigits: state.numberOfDigits,
+      correct: correct ? 1 : 0
+    }
+    const nextSeriesType = actions.switchSeriesType(latestTrialLog, state.log[state.log.length - 1])
     state = {
       ...state,
       trialNum: state.trialNum + 1,
@@ -73,19 +82,17 @@ const actions = {
     }
   },
   createCSV: array2d => array2d.map(row => row.join(",")).join("\r\n"),
-  switchSeriesType: args => state => {
-    const correct = args[0]
-    const latestNoD = args[1]
-    if (state.trialNum == 1) {
-      return state.seriesType
+  switchSeriesType: (latestTrialLog, previousTrialLog) => {
+    if (latestTrialLog.trialNum == 1) {
+      return 1
     }
     // 文字数が0にならないようにする
-    if (latestNoD == 1) {
-        return 1
+    if (latestTrialLog.numberOfDigits == 1) {
+      return 1
     }
-    if (state.seriesType == 1 && state.log[state.log.length - 1][5] == 0 && !correct) {
+    if (latestTrialLog.seriesType == 1 && previousTrialLog.correct == 0 && !latestTrialLog.correct) {
       return -1
-    } else if (state.seriesType == -1 && state.log[state.log.length - 1][5] == 1 && correct) {
+    } else if (latestTrialLog.seriesType == -1 && previousTrialLog.correct == 1 && latestTrialLog.correct) {
       return 1
     } else {
       return state.seriesType
@@ -105,7 +112,7 @@ const actions = {
     // 系列内に正解が1つもない場合
     if (correctTrials.length == 0) {
       // 2連続不正解の上昇系列では系列内第1試行より1つ少ない桁数を返すこととする
-      if (thisSeries[0][1] == 1){
+      if (thisSeries[0][1] == 1) {
         return thisSeries[0][4] - 1
       } else { // 桁数が1になるまで不正解を続けた下降系列は0を返すこととする
         return 0
@@ -141,5 +148,5 @@ const view = (state, actions) => (
   ])
 )
 module.exports = actions
-//const main = app(state, actions, view, document.body)
-//main.startMemorize()
+const main = app(state, actions, view, document.body)
+main.startMemorize()

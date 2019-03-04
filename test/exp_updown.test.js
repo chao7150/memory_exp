@@ -17,8 +17,15 @@ describe("create CSV", () => {
   })
 })
 
-describe("calculate representative of the series", () => {
-  test("right value", () => {
-
+describe("switch series type", () => {
+  test("after first trial, series must be 1", () => {
+    expect(actions.switchSeriesType({trialNum: 1}, {})).toBe(1)
+  })
+  test("when number of digits is 1, next number of digits must be 2", () => {
+    expect(actions.switchSeriesType({numberOfDigits: 1}, {})).toBe(1)
+  })
+  test("two successive correct or incorrect changes series", () => {
+    const ordinaryTrial = {trialNum: 2, numberOfDigits: 2}
+    expect(actions.switchSeriesType({...ordinaryTrial, seriesType: 1, correct: 1}, {...ordinaryTrial})).toBe()
   })
 })
