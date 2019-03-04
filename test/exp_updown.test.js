@@ -4,7 +4,7 @@ describe("create progression", () => {
   test("right length", () => {
     for(var i = 0; i < 100; i++){
       for(var j = 1; j < 21; j++){
-        expect(actions.createProgression(j).length).toBe(j)
+        expect(actions.createProgression(j)).toHaveLength(j)
       }
     }
   })
@@ -26,6 +26,24 @@ describe("switch series type", () => {
   })
   test("two successive correct or incorrect changes series", () => {
     const ordinaryTrial = {trialNum: 2, numberOfDigits: 2}
-    expect(actions.switchSeriesType({...ordinaryTrial, seriesType: 1, correct: 1}, {...ordinaryTrial})).toBe()
+    expect(actions.switchSeriesType({...ordinaryTrial, seriesType:   1, correct: 1}, {...ordinaryTrial, seriesType:  1, correct: 1})).toBe(1)
+    expect(actions.switchSeriesType({...ordinaryTrial, seriesType:   1, correct: 1}, {...ordinaryTrial, seriesType: -1, correct: 1})).toBe(1)
+    expect(actions.switchSeriesType({...ordinaryTrial, seriesType:  -1, correct: 1}, {...ordinaryTrial, seriesType:  1, correct: 1})).toBe(1)
+    expect(actions.switchSeriesType({...ordinaryTrial, seriesType:  -1, correct: 1}, {...ordinaryTrial, seriesType: -1, correct: 1})).toBe(1)
+
+    expect(actions.switchSeriesType({...ordinaryTrial, seriesType:   1, correct: 1}, {...ordinaryTrial, seriesType:  1, correct: 0})).toBe(1)
+    expect(actions.switchSeriesType({...ordinaryTrial, seriesType:   1, correct: 1}, {...ordinaryTrial, seriesType: -1, correct: 0})).toBe(1)
+    expect(actions.switchSeriesType({...ordinaryTrial, seriesType:  -1, correct: 1}, {...ordinaryTrial, seriesType:  1, correct: 0})).toBe(1)
+    expect(actions.switchSeriesType({...ordinaryTrial, seriesType:  -1, correct: 1}, {...ordinaryTrial, seriesType: -1, correct: 0})).toBe(1)
+
+    expect(actions.switchSeriesType({...ordinaryTrial, seriesType:   1, correct: 0}, {...ordinaryTrial, seriesType:  1, correct: 1})).toBe(1)
+    expect(actions.switchSeriesType({...ordinaryTrial, seriesType:   1, correct: 0}, {...ordinaryTrial, seriesType: -1, correct: 1})).toBe(1)
+    expect(actions.switchSeriesType({...ordinaryTrial, seriesType:  -1, correct: 0}, {...ordinaryTrial, seriesType:  1, correct: 1})).toBe(1)
+    expect(actions.switchSeriesType({...ordinaryTrial, seriesType:  -1, correct: 0}, {...ordinaryTrial, seriesType: -1, correct: 1})).toBe(1)
+
+    expect(actions.switchSeriesType({...ordinaryTrial, seriesType:  1, correct: 0}, {...ordinaryTrial, seriesType: 1, correct: 0})).toBe(-1)
+    expect(actions.switchSeriesType({...ordinaryTrial, seriesType:  1, correct: 0}, {...ordinaryTrial, seriesType: 1, correct: 0})).toBe(-1)
+    expect(actions.switchSeriesType({...ordinaryTrial, seriesType:  1, correct: 0}, {...ordinaryTrial, seriesType: 1, correct: 0})).toBe(-1)
+    expect(actions.switchSeriesType({...ordinaryTrial, seriesType:  1, correct: 0}, {...ordinaryTrial, seriesType: 1, correct: 0})).toBe(-1)
   })
 })

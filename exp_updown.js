@@ -18,7 +18,7 @@ const state = {
   log: [{
     trialNum: "trialNum",
     seriesNum: "series",
-    seriesType: "seriesType"
+    seriesType: "seriesType",
     progression: "progression",
     response: "response",
     numberOfDigits: "numberOfDigits",
@@ -32,7 +32,11 @@ const actions = {
     setTimeout(actions.endMemorize, 3000)
     return { ...state, presentation: actions.createProgression(state.numberOfDigits), inputBox: "" }
   },
-  createProgression: length => Array.apply(null, { length }).map(() => Math.floor(Math.random() * 10)).join(""),
+  createProgression: length => {
+    const max = 10 ** length
+    const min = 10 ** (length - 1)
+    return String(Math.floor(Math.random() * (max - min) + min))
+  },
   endMemorize: () => (state, actions) => {
     setTimeout(actions.startAnswer, 5000)
     return { ...state, visibility: "hidden" }
