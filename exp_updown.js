@@ -85,8 +85,20 @@ const actions = {
       return state
     }
   },
-  createCSV: array2d => array2d.map(row => row.join(",")).join("\r\n"),
-  switchSeriesType: (latestTrialLog, previousTrialLog) => {
+  createCSV: arrayOfLogs => {
+    return arrayOfLogs.map(log => {
+      return [
+        log.trialNum,
+        log.seriesNum,
+        log.seriesType,
+        log.progression,
+        log.response,
+        log.numberOfDigits,
+        log.correct
+      ]
+    }).map(row => row.join(",")).join("\r\n")
+  },
+  switchSeriesType: (latestSecondTrialLog, latestTrialLog) => {
     if (latestTrialLog.trialNum == 1) {
       return 1
     }
@@ -94,12 +106,12 @@ const actions = {
     if (latestTrialLog.numberOfDigits == 1) {
       return 1
     }
-    if (latestTrialLog.seriesType == 1 && previousTrialLog.correct == 0 && !latestTrialLog.correct) {
+    if (latestTrialLog.seriesType == 1 && latestSecondTrialLog.correct == 0 && latestTrialLog.correct == 0) {
       return -1
-    } else if (latestTrialLog.seriesType == -1 && previousTrialLog.correct == 1 && latestTrialLog.correct) {
+    } else if (latestTrialLog.seriesType == -1 && latestSecondTrialLog.correct == 1 && latestTrialLog.correct == 1) {
       return 1
     } else {
-      return state.seriesType
+      return latestTrialLog.seriesType
     }
   },
   calcMemCap: logs => {
