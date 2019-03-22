@@ -14,6 +14,7 @@ const state = {
   readonly: "readonly",
   trialNum: 1,
   seriesType: 1, // 上昇系列:1, 下降系列:-1
+  seriesNum: 1,
   numberOfDigits: settings.initialDifficulty,
   log: [{
     trialNum: "trialNum",
@@ -24,7 +25,6 @@ const state = {
     numberOfDigits: "numberOfDigits",
     correct: "correct"
   }],
-  seriesNum: 1
 }
 
 const actions = {
@@ -78,8 +78,8 @@ const actions = {
       seriesNum: state.seriesNum + (nextSeriesType != state.seriesType ? 1 : 0),
     }
     if (state.seriesNum > settings.series) {
-      const memCap = actions.calcMemCap(state.log)
-      return { ...state, result: actions.createCSV(state.log.concat([["capacity", memCap]])) }
+      const memCap = actions.separateIntoSeries(state.log).map(actions.calcReprOfSeries).reduce((a, c) => a + c, 0) / settings.series
+      return { ...state, result: actions.createCSV(state.log.concat([{trialNum: "memCap", seriesNum: memCap}]))}
     } else {
       setTimeout(actions.startMemorize, 3000)
       return state
@@ -114,28 +114,49 @@ const actions = {
       return latestTrialLog.seriesType
     }
   },
-  calcMemCap: logs => {
-    var sum = 0
-    for (let i = 1; i <= settings.series; i++) {
-      const thisSeries = logs.filter(log => log[1] == i)
-      sum += actions.calcReprOfSeries(thisSeries)
+  separateIntoSeries: logs => {
+    const separatedLogs = []
+    for (let i = 1; i <= logs[logs.length - 1].seriesNum; i++) {
+      separatedLogs.push(logs.filter(log => log.seriesNum == i))
     }
-    return sum / settings.series
+    return separatedLogs
   },
   // その系列の代表値を計算する
   calcReprOfSeries: thisSeries => {
-    const correctTrials = thisSeries.filter(trial => trial[5] == 1)
+    const seriesType = thisSeries[0].seriesType
+    const correctTrials = thisSeries.filter(trial => trial.correct == 1)
     // 系列内に正解が1つもない場合
     if (correctTrials.length == 0) {
       // 2連続不正解の上昇系列では系列内第1試行より1つ少ない桁数を返すこととする
-      if (thisSeries[0][1] == 1) {
-        return thisSeries[0][4] - 1
+      if (seriesType == 1) {
+        return thisSeries[0].numberOfDigits - 1
       } else { // 桁数が1になるまで不正解を続けた下降系列は0を返すこととする
         return 0
       }
-    } else {  // 上記の特殊例以外は系列内で正解したもっとも大きい桁数を返す
-      return Math.max(...correctTrials.map(trial => trial[4]))
     }
+    const correctArray = thisSeries.map(trial => trial.correct)
+    const successiveCorrectArray = []
+    for (let i = 1; i < correctArray.length; i++) {
+      successiveCorrectArray.push(correctArray[i - 1] + correctArray[i])
+    }
+    const successiveCorrectIndexes = actions.IndexesOf(successiveCorrectArray, 2)
+    // 2連続正答がない（上昇系列で起こりうる）ときは系列内第1試行より1つ少ない桁数を返すこととする
+    if (successiveCorrectIndexes.length == 0) {
+      return thisSeries[0].numberOfDigits - 1
+    }
+    if (seriesType == 1) {
+      return thisSeries[Math.max(...successiveCorrectIndexes) + 1].numberOfDigits
+    }
+    return thisSeries[successiveCorrectIndexes[0]].numberOfDigits
+  },
+  IndexesOf: (array, value) => {
+    const indexes = []
+    let idx = array.indexOf(value)
+    while (idx != -1) {
+      indexes.push(idx)
+      idx = array.indexOf(value, idx + 1)
+    }
+    return indexes
   },
   updateInput: e => state => {
     return { ...state, inputBox: e.target.value }
