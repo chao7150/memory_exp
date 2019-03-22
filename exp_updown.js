@@ -3,7 +3,7 @@ const { h, app } = hyperapp
 // 実験のパラメータを决める
 const settings = {
   initialDifficulty: 4,
-  series: 5,
+  series: 2,
 }
 
 const state = {
@@ -75,15 +75,20 @@ const actions = {
     }
     if (state.seriesNum > settings.series) {
       const memCap = helpers.separateIntoSeries(state.log).map(helpers.calcReprOfSeries).reduce((a, c) => a + c, 0) / settings.series
-      return { ...state, result: helpers.createCSV(state.log.concat([{trialNum: "memCap", seriesNum: memCap}]))}
-    } else {
-      setTimeout(actions.startMemorize, 3000)
-      return state
+      const resultCSV = helpers.createCSV(state.log.concat([{trialNum: "memCap", seriesNum: memCap}]))
+      const resultBlob = new Blob([resultCSV])
+      const virtualAnchor = document.createElement("a")
+      virtualAnchor.setAttribute("download", "updown.csv")
+      virtualAnchor.href = URL.createObjectURL(resultBlob)
+      virtualAnchor.click()
+      return { ...state, result: resultCSV}
     }
+    setTimeout(actions.startMemorize, 3000)
+    return state
   },
   updateInput: e => state => {
     return { ...state, inputBox: e.target.value }
-  }
+  },
 }
 
 // データ処理を担当する関数群
@@ -185,7 +190,7 @@ const view = (state, actions) => (
       })
     ]),
     h("br"),
-    h("p", {}, state.result ? "このページを離れる前に必ず以下のデータを保存してください。メモ帳等のテキストエディタに貼り付けて拡張子を.csvとして保存するとexcelで開けます。" : ""),
+    h("p", {}, state.result ? "実験が終わりました。結果は自動でダウンロードされたので確認してください。" : ""),
     h("pre", {}, state.result)
   ])
 )
