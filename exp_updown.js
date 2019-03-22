@@ -27,15 +27,11 @@ const state = {
   }],
 }
 
+// 画面遷移を担当する関数群
 const actions = {
   startMemorize: () => (state, actions) => {
     setTimeout(actions.endMemorize, 3000)
-    return { ...state, presentation: actions.createProgression(state.numberOfDigits), inputBox: "" }
-  },
-  createProgression: length => {
-    const max = 10 ** length
-    const min = 10 ** (length - 1)
-    return String(Math.floor(Math.random() * (max - min) + min))
+    return { ...state, presentation: helpers.createProgression(state.numberOfDigits), inputBox: "" }
   },
   endMemorize: () => (state, actions) => {
     setTimeout(actions.startAnswer, 5000)
@@ -65,7 +61,7 @@ const actions = {
       numberOfDigits: state.numberOfDigits,
       correct: correct ? 1 : 0
     }
-    const nextSeriesType = actions.switchSeriesType(latestTrialLog, state.log[state.log.length - 1])
+    const nextSeriesType = helpers.switchSeriesType(state.log[state.log.length - 1], latestTrialLog)
     state = {
       ...state,
       trialNum: state.trialNum + 1,
@@ -78,12 +74,24 @@ const actions = {
       seriesNum: state.seriesNum + (nextSeriesType != state.seriesType ? 1 : 0),
     }
     if (state.seriesNum > settings.series) {
-      const memCap = actions.separateIntoSeries(state.log).map(actions.calcReprOfSeries).reduce((a, c) => a + c, 0) / settings.series
-      return { ...state, result: actions.createCSV(state.log.concat([{trialNum: "memCap", seriesNum: memCap}]))}
+      const memCap = helpers.separateIntoSeries(state.log).map(helpers.calcReprOfSeries).reduce((a, c) => a + c, 0) / settings.series
+      return { ...state, result: helpers.createCSV(state.log.concat([{trialNum: "memCap", seriesNum: memCap}]))}
     } else {
       setTimeout(actions.startMemorize, 3000)
       return state
     }
+  },
+  updateInput: e => state => {
+    return { ...state, inputBox: e.target.value }
+  }
+}
+
+// データ処理を担当する関数群
+const helpers = {
+  createProgression: length => {
+    const max = 10 ** length
+    const min = 10 ** (length - 1)
+    return String(Math.floor(Math.random() * (max - min) + min))
   },
   createCSV: arrayOfLogs => {
     return arrayOfLogs.map(log => {
@@ -139,7 +147,7 @@ const actions = {
     for (let i = 1; i < correctArray.length; i++) {
       successiveCorrectArray.push(correctArray[i - 1] + correctArray[i])
     }
-    const successiveCorrectIndexes = actions.IndexesOf(successiveCorrectArray, 2)
+    const successiveCorrectIndexes = helpers.IndexesOf(successiveCorrectArray, 2)
     // 2連続正答がない（上昇系列で起こりうる）ときは系列内第1試行より1つ少ない桁数を返すこととする
     if (successiveCorrectIndexes.length == 0) {
       return thisSeries[0].numberOfDigits - 1
@@ -158,9 +166,6 @@ const actions = {
     }
     return indexes
   },
-  updateInput: e => state => {
-    return { ...state, inputBox: e.target.value }
-  }
 }
 
 const view = (state, actions) => (
@@ -184,6 +189,6 @@ const view = (state, actions) => (
     h("pre", {}, state.result)
   ])
 )
-module.exports = actions
+//module.exports = helpers
 const main = app(state, actions, view, document.body)
 main.startMemorize()
