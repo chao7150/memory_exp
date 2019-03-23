@@ -3,7 +3,7 @@ const { h, app } = hyperapp
 // 実験のパラメータを决める
 const settings = {
   initialDifficulty: 4,
-  series: 5,
+  series: 2,
 }
 
 const state = {
@@ -14,6 +14,7 @@ const state = {
   readonly: "readonly",
   trialNum: 1,
   seriesType: 1, // 上昇系列:1, 下降系列:-1
+  seriesNum: 1,
   numberOfDigits: settings.initialDifficulty,
   log: [{
     trialNum: "trialNum",
@@ -24,18 +25,13 @@ const state = {
     numberOfDigits: "numberOfDigits",
     correct: "correct"
   }],
-  seriesNum: 1
 }
 
+// 画面遷移を担当する関数群
 const actions = {
   startMemorize: () => (state, actions) => {
     setTimeout(actions.endMemorize, 3000)
-    return { ...state, presentation: actions.createProgression(state.numberOfDigits), inputBox: "" }
-  },
-  createProgression: length => {
-    const max = 10 ** length
-    const min = 10 ** (length - 1)
-    return String(Math.floor(Math.random() * (max - min) + min))
+    return { ...state, presentation: helpers.createProgression(state.numberOfDigits), inputBox: "" }
   },
   endMemorize: () => (state, actions) => {
     setTimeout(actions.startAnswer, 5000)
@@ -65,7 +61,7 @@ const actions = {
       numberOfDigits: state.numberOfDigits,
       correct: correct ? 1 : 0
     }
-    const nextSeriesType = actions.switchSeriesType(latestTrialLog, state.log[state.log.length - 1])
+    const nextSeriesType = helpers.switchSeriesType(state.log[state.log.length - 1], latestTrialLog)
     state = {
       ...state,
       trialNum: state.trialNum + 1,
@@ -78,15 +74,44 @@ const actions = {
       seriesNum: state.seriesNum + (nextSeriesType != state.seriesType ? 1 : 0),
     }
     if (state.seriesNum > settings.series) {
-      const memCap = actions.calcMemCap(state.log)
-      return { ...state, result: actions.createCSV(state.log.concat([["capacity", memCap]])) }
-    } else {
-      setTimeout(actions.startMemorize, 3000)
-      return state
+      const memCap = helpers.separateIntoSeries(state.log).map(helpers.calcReprOfSeries).reduce((a, c) => a + c, 0) / settings.series
+      const resultCSV = helpers.createCSV(state.log.concat([{trialNum: "memCap", seriesNum: memCap}]))
+      const resultBlob = new Blob([resultCSV])
+      const virtualAnchor = document.createElement("a")
+      virtualAnchor.setAttribute("download", "updown.csv")
+      virtualAnchor.href = URL.createObjectURL(resultBlob)
+      virtualAnchor.click()
+      return { ...state, result: resultCSV}
     }
+    setTimeout(actions.startMemorize, 3000)
+    return state
   },
-  createCSV: array2d => array2d.map(row => row.join(",")).join("\r\n"),
-  switchSeriesType: (latestTrialLog, previousTrialLog) => {
+  updateInput: e => state => {
+    return { ...state, inputBox: e.target.value }
+  },
+}
+
+// データ処理を担当する関数群
+const helpers = {
+  createProgression: length => {
+    const max = 10 ** length
+    const min = 10 ** (length - 1)
+    return String(Math.floor(Math.random() * (max - min) + min))
+  },
+  createCSV: arrayOfLogs => {
+    return arrayOfLogs.map(log => {
+      return [
+        log.trialNum,
+        log.seriesNum,
+        log.seriesType,
+        log.progression,
+        log.response,
+        log.numberOfDigits,
+        log.correct
+      ]
+    }).map(row => row.join(",")).join("\r\n")
+  },
+  switchSeriesType: (latestSecondTrialLog, latestTrialLog) => {
     if (latestTrialLog.trialNum == 1) {
       return 1
     }
@@ -94,40 +119,58 @@ const actions = {
     if (latestTrialLog.numberOfDigits == 1) {
       return 1
     }
-    if (latestTrialLog.seriesType == 1 && previousTrialLog.correct == 0 && !latestTrialLog.correct) {
+    if (latestTrialLog.seriesType == 1 && latestSecondTrialLog.correct == 0 && latestTrialLog.correct == 0) {
       return -1
-    } else if (latestTrialLog.seriesType == -1 && previousTrialLog.correct == 1 && latestTrialLog.correct) {
+    } else if (latestTrialLog.seriesType == -1 && latestSecondTrialLog.correct == 1 && latestTrialLog.correct == 1) {
       return 1
     } else {
-      return state.seriesType
+      return latestTrialLog.seriesType
     }
   },
-  calcMemCap: logs => {
-    var sum = 0
-    for (let i = 1; i <= settings.series; i++) {
-      const thisSeries = logs.filter(log => log[1] == i)
-      sum += actions.calcReprOfSeries(thisSeries)
+  separateIntoSeries: logs => {
+    const separatedLogs = []
+    for (let i = 1; i <= logs[logs.length - 1].seriesNum; i++) {
+      separatedLogs.push(logs.filter(log => log.seriesNum == i))
     }
-    return sum / settings.series
+    return separatedLogs
   },
   // その系列の代表値を計算する
   calcReprOfSeries: thisSeries => {
-    const correctTrials = thisSeries.filter(trial => trial[5] == 1)
+    const seriesType = thisSeries[0].seriesType
+    const correctTrials = thisSeries.filter(trial => trial.correct == 1)
     // 系列内に正解が1つもない場合
     if (correctTrials.length == 0) {
       // 2連続不正解の上昇系列では系列内第1試行より1つ少ない桁数を返すこととする
-      if (thisSeries[0][1] == 1) {
-        return thisSeries[0][4] - 1
+      if (seriesType == 1) {
+        return thisSeries[0].numberOfDigits - 1
       } else { // 桁数が1になるまで不正解を続けた下降系列は0を返すこととする
         return 0
       }
-    } else {  // 上記の特殊例以外は系列内で正解したもっとも大きい桁数を返す
-      return Math.max(...correctTrials.map(trial => trial[4]))
     }
+    const correctArray = thisSeries.map(trial => trial.correct)
+    const successiveCorrectArray = []
+    for (let i = 1; i < correctArray.length; i++) {
+      successiveCorrectArray.push(correctArray[i - 1] + correctArray[i])
+    }
+    const successiveCorrectIndexes = helpers.IndexesOf(successiveCorrectArray, 2)
+    // 2連続正答がない（上昇系列で起こりうる）ときは系列内第1試行より1つ少ない桁数を返すこととする
+    if (successiveCorrectIndexes.length == 0) {
+      return thisSeries[0].numberOfDigits - 1
+    }
+    if (seriesType == 1) {
+      return thisSeries[Math.max(...successiveCorrectIndexes) + 1].numberOfDigits
+    }
+    return thisSeries[successiveCorrectIndexes[0]].numberOfDigits
   },
-  updateInput: e => state => {
-    return { ...state, inputBox: e.target.value }
-  }
+  IndexesOf: (array, value) => {
+    const indexes = []
+    let idx = array.indexOf(value)
+    while (idx != -1) {
+      indexes.push(idx)
+      idx = array.indexOf(value, idx + 1)
+    }
+    return indexes
+  },
 }
 
 const view = (state, actions) => (
@@ -147,10 +190,10 @@ const view = (state, actions) => (
       })
     ]),
     h("br"),
-    h("p", {}, state.result ? "このページを離れる前に必ず以下のデータを保存してください。メモ帳等のテキストエディタに貼り付けて拡張子を.csvとして保存するとexcelで開けます。" : ""),
+    h("p", {}, state.result ? "実験が終わりました。結果は自動でダウンロードされたので確認してください。" : ""),
     h("pre", {}, state.result)
   ])
 )
-module.exports = actions
+//module.exports = helpers
 const main = app(state, actions, view, document.body)
 main.startMemorize()
