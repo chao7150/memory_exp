@@ -59,7 +59,7 @@ const actions = {
       progression: state.presentation,
       response: state.inputBox,
       numberOfDigits: state.numberOfDigits,
-      correct: correct ? 1 : 0
+      correct: correct ? 1 : 0,
     }
     const nextSeriesType = helpers.switchSeriesType(state.log[state.log.length - 1], latestTrialLog)
     state = {
@@ -81,7 +81,7 @@ const actions = {
       virtualAnchor.setAttribute("download", "updown.csv")
       virtualAnchor.href = URL.createObjectURL(resultBlob)
       virtualAnchor.click()
-      return { ...state, result: resultCSV}
+      return { ...state, presentation: "end", result: resultCSV}
     }
     setTimeout(actions.startMemorize, 3000)
     return state

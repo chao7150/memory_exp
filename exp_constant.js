@@ -9,18 +9,19 @@ const state = {
   readonly: "readonly",
   trialNum: 1,
   difficultyList: [],
-  log: [["trialNum", "number", "response", "numberOfDigits", "correct"]]
+  log: [{
+    trialNum: "trialNum",
+    progression: "progression",
+    response: "response",
+    numberOfDigits: "numberOfDigits",
+    correct: "correct",
+  }]
 }
 
 const actions = {
   startMemorize: () => (state, actions) => {
-    let newNumber = ""
-    for (let i = 0; i < state.difficultyList[state.trialNum - 1]; i++) {
-      const digit = String(Math.floor(Math.random() * 10))
-      newNumber += digit
-    }
     setTimeout(actions.endMemorize, 3000)
-    return { ...state, presentation: newNumber, inputBox: "" }
+    return { ...state, presentation: helpers.createProgression(state.difficultyList[state.trialNum - 1]), inputBox: "" }
   },
   endMemorize: () => (state, actions) => {
     setTimeout(actions.startAnswer, 5000)
@@ -41,13 +42,13 @@ const actions = {
     }
     // 正解判定
     const correct = state.presentation == state.inputBox
-    latestTrialLog = [
-      state.trialNum,
-      state.presentation,
-      state.inputBox,
-      state.difficultyList[state.trialNum - 1],
-      correct ? 1 : 0
-    ]
+    latestTrialLog = {
+      trialNum: state.trialNum,
+      progression: state.presentation,
+      response: state.inputBox,
+      numberOfDigits: state.difficultyList[state.trialNum - 1],
+      correct: correct ? 1 : 0,
+    }
     state = {
       ...state,
       trialNum: state.trialNum + 1,
@@ -57,10 +58,16 @@ const actions = {
       readonly: "readonly"
     }
     if (state.trialNum > state.difficultyList.length) {
-      return { ...state, presentation: "end", result: actions.createCSV(state.log) }
-    } else {
-      setTimeout(actions.startMemorize, 3000)
-      return state
+      const resultCSV = helpers.createCSV(state.log)
+      const resultBlob = new Blob([resultCSV])
+      const virtualAnchor = document.createElement("a")
+      virtualAnchor.setAttribute("download", "constant.csv")
+      virtualAnchor.href = URL.createObjectURL(resultBlob)
+      virtualAnchor.click()
+      return { ...state, presentation: "end", result: resultCSV }
+    }
+    setTimeout(actions.startMemorize, 3000)
+    return state
     }
   },
   createCSV: array2d => array2d.map(row => row.join(",")).join("\r\n"),
@@ -87,6 +94,86 @@ const actions = {
     setTimeout(actions.startMemorize, 100)
     return { ...state, setDifficultyPhase: false, configuration: conf, difficultyList: difficultyList }
   }
+}
+
+// データ処理を担当する関数群
+const helpers = {
+  createProgression: length => {
+    const max = 10 ** length
+    const min = 10 ** (length - 1)
+    return String(Math.floor(Math.random() * (max - min) + min))
+  },
+  createCSV: arrayOfLogs => {
+    return arrayOfLogs.map(log => {
+      return [
+        log.trialNum,
+        log.progression,
+        log.response,
+        log.numberOfDigits,
+        log.correct
+      ]
+    }).map(row => row.join(",")).join("\r\n")
+  },
+  switchSeriesType: (latestSecondTrialLog, latestTrialLog) => {
+    if (latestTrialLog.trialNum == 1) {
+      return 1
+    }
+    // 文字数が0にならないようにする
+    if (latestTrialLog.numberOfDigits == 1) {
+      return 1
+    }
+    if (latestTrialLog.seriesType == 1 && latestSecondTrialLog.correct == 0 && latestTrialLog.correct == 0) {
+      return -1
+    } else if (latestTrialLog.seriesType == -1 && latestSecondTrialLog.correct == 1 && latestTrialLog.correct == 1) {
+      return 1
+    } else {
+      return latestTrialLog.seriesType
+    }
+  },
+  separateIntoSeries: logs => {
+    const separatedLogs = []
+    for (let i = 1; i <= logs[logs.length - 1].seriesNum; i++) {
+      separatedLogs.push(logs.filter(log => log.seriesNum == i))
+    }
+    return separatedLogs
+  },
+  // その系列の代表値を計算する
+  calcReprOfSeries: thisSeries => {
+    const seriesType = thisSeries[0].seriesType
+    const correctTrials = thisSeries.filter(trial => trial.correct == 1)
+    // 系列内に正解が1つもない場合
+    if (correctTrials.length == 0) {
+      // 2連続不正解の上昇系列では系列内第1試行より1つ少ない桁数を返すこととする
+      if (seriesType == 1) {
+        return thisSeries[0].numberOfDigits - 1
+      } else { // 桁数が1になるまで不正解を続けた下降系列は0を返すこととする
+        return 0
+      }
+    }
+    const correctArray = thisSeries.map(trial => trial.correct)
+    const successiveCorrectArray = []
+    for (let i = 1; i < correctArray.length; i++) {
+      successiveCorrectArray.push(correctArray[i - 1] + correctArray[i])
+    }
+    const successiveCorrectIndexes = helpers.IndexesOf(successiveCorrectArray, 2)
+    // 2連続正答がない（上昇系列で起こりうる）ときは系列内第1試行より1つ少ない桁数を返すこととする
+    if (successiveCorrectIndexes.length == 0) {
+      return thisSeries[0].numberOfDigits - 1
+    }
+    if (seriesType == 1) {
+      return thisSeries[Math.max(...successiveCorrectIndexes) + 1].numberOfDigits
+    }
+    return thisSeries[successiveCorrectIndexes[0]].numberOfDigits
+  },
+  IndexesOf: (array, value) => {
+    const indexes = []
+    let idx = array.indexOf(value)
+    while (idx != -1) {
+      indexes.push(idx)
+      idx = array.indexOf(value, idx + 1)
+    }
+    return indexes
+  },
 }
 
 const view = (state, actions) => (
