@@ -68,9 +68,7 @@ const actions = {
     }
     setTimeout(actions.startMemorize, 3000)
     return state
-    }
   },
-  createCSV: array2d => array2d.map(row => row.join(",")).join("\r\n"),
   updateInput: e => state => {
     return { ...state, inputBox: e.target.value }
   },
@@ -114,66 +112,6 @@ const helpers = {
       ]
     }).map(row => row.join(",")).join("\r\n")
   },
-  switchSeriesType: (latestSecondTrialLog, latestTrialLog) => {
-    if (latestTrialLog.trialNum == 1) {
-      return 1
-    }
-    // 文字数が0にならないようにする
-    if (latestTrialLog.numberOfDigits == 1) {
-      return 1
-    }
-    if (latestTrialLog.seriesType == 1 && latestSecondTrialLog.correct == 0 && latestTrialLog.correct == 0) {
-      return -1
-    } else if (latestTrialLog.seriesType == -1 && latestSecondTrialLog.correct == 1 && latestTrialLog.correct == 1) {
-      return 1
-    } else {
-      return latestTrialLog.seriesType
-    }
-  },
-  separateIntoSeries: logs => {
-    const separatedLogs = []
-    for (let i = 1; i <= logs[logs.length - 1].seriesNum; i++) {
-      separatedLogs.push(logs.filter(log => log.seriesNum == i))
-    }
-    return separatedLogs
-  },
-  // その系列の代表値を計算する
-  calcReprOfSeries: thisSeries => {
-    const seriesType = thisSeries[0].seriesType
-    const correctTrials = thisSeries.filter(trial => trial.correct == 1)
-    // 系列内に正解が1つもない場合
-    if (correctTrials.length == 0) {
-      // 2連続不正解の上昇系列では系列内第1試行より1つ少ない桁数を返すこととする
-      if (seriesType == 1) {
-        return thisSeries[0].numberOfDigits - 1
-      } else { // 桁数が1になるまで不正解を続けた下降系列は0を返すこととする
-        return 0
-      }
-    }
-    const correctArray = thisSeries.map(trial => trial.correct)
-    const successiveCorrectArray = []
-    for (let i = 1; i < correctArray.length; i++) {
-      successiveCorrectArray.push(correctArray[i - 1] + correctArray[i])
-    }
-    const successiveCorrectIndexes = helpers.IndexesOf(successiveCorrectArray, 2)
-    // 2連続正答がない（上昇系列で起こりうる）ときは系列内第1試行より1つ少ない桁数を返すこととする
-    if (successiveCorrectIndexes.length == 0) {
-      return thisSeries[0].numberOfDigits - 1
-    }
-    if (seriesType == 1) {
-      return thisSeries[Math.max(...successiveCorrectIndexes) + 1].numberOfDigits
-    }
-    return thisSeries[successiveCorrectIndexes[0]].numberOfDigits
-  },
-  IndexesOf: (array, value) => {
-    const indexes = []
-    let idx = array.indexOf(value)
-    while (idx != -1) {
-      indexes.push(idx)
-      idx = array.indexOf(value, idx + 1)
-    }
-    return indexes
-  },
 }
 
 const view = (state, actions) => (
@@ -209,9 +147,11 @@ const view = (state, actions) => (
         })
       ]),
       h("br"),
-      h("p", {}, state.result ? "このページを離れる前に必ず以下のデータを保存してください。メモ帳等のテキストエディタに貼り付けて拡張子を.csvとして保存するとexcelで開けます。" : ""),
+      h("p", {}, state.result ? "実験が終わりました。結果は自動でダウンロードされたので確認してください。" : ""),
       h("pre", {}, state.result)
     ])
 )
 
+constant_helpers = helpers
+module.exports = constant_helpers
 const main = app(state, actions, view, document.body)

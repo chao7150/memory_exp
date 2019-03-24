@@ -194,6 +194,7 @@ const view = (state, actions) => (
     h("pre", {}, state.result)
   ])
 )
-//module.exports = helpers
+const updown_helpers = helpers
+module.exports = updown_helpers
 const main = app(state, actions, view, document.body)
 main.startMemorize()
