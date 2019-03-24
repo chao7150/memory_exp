@@ -147,11 +147,11 @@ const view = (state, actions) => (
         })
       ]),
       h("br"),
-      h("p", {}, state.result ? "実験が終わりました。結果は自動でダウンロードされたので確認してください。" : ""),
+      h("p", {}, state.result ? "実験が終わりました。以下の結果と同じものが自動でダウンロードされたので確認してください。" : ""),
       h("pre", {}, state.result)
     ])
 )
 
 constant_helpers = helpers
-module.exports = constant_helpers
+//module.exports = constant_helpers
 const main = app(state, actions, view, document.body)
