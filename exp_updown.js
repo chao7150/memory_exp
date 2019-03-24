@@ -3,7 +3,7 @@ const { h, app } = hyperapp
 // 実験のパラメータを决める
 const settings = {
   initialDifficulty: 4,
-  series: 2,
+  series: 20,
 }
 
 const state = {
@@ -194,7 +194,10 @@ const view = (state, actions) => (
     h("pre", {}, state.result)
   ])
 )
-const updown_helpers = helpers
+
+// 開発者向け
+//const updown_helpers = helpers
 //module.exports = updown_helpers
+
 const main = app(state, actions, view, document.body)
 main.startMemorize()

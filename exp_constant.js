@@ -152,6 +152,8 @@ const view = (state, actions) => (
     ])
 )
 
-constant_helpers = helpers
+// 開発者向け
+//constant_helpers = helpers
 //module.exports = constant_helpers
+
 const main = app(state, actions, view, document.body)

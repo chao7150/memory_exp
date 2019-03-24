@@ -1,11 +1,9 @@
-// practice
-// L74 is the only difference from honban
-
 const { h, app } = hyperapp
 
+// 実験のパラメータを决める
 const settings = {
   initialDifficulty: 4,
-  trials: 10
+  trials: 10,
 }
 
 const state = {
@@ -16,20 +14,24 @@ const state = {
   readonly: "readonly",
   trialNum: 1,
   seriesType: 1, // 上昇系列:1, 下降系列:-1
+  seriesNum: 1,
   numberOfDigits: settings.initialDifficulty,
-  log: [["trialNum", "series", "number", "response", "numberOfDigits", "correct"]],
-  seriesNum: 1
+  log: [{
+    trialNum: "trialNum",
+    seriesNum: "series",
+    seriesType: "seriesType",
+    progression: "progression",
+    response: "response",
+    numberOfDigits: "numberOfDigits",
+    correct: "correct"
+  }],
 }
 
+// 画面遷移を担当する関数群
 const actions = {
   startMemorize: () => (state, actions) => {
-    let newNumber = ""
-    for (let i = 0; i < state.numberOfDigits; i++) {
-      const digit = String(Math.floor(Math.random() * 10))
-      newNumber += digit
-    }
     setTimeout(actions.endMemorize, 3000)
-    return { ...state, presentation: newNumber, inputBox: "" }
+    return { ...state, presentation: helpers.createProgression(state.numberOfDigits), inputBox: "" }
   },
   endMemorize: () => (state, actions) => {
     setTimeout(actions.startAnswer, 5000)
@@ -50,15 +52,16 @@ const actions = {
     }
     // 正解判定
     const correct = state.presentation == state.inputBox
-    latestTrialLog = [
-      state.trialNum,
-      state.seriesNum,
-      state.presentation,
-      state.inputBox,
-      state.numberOfDigits,
-      correct ? 1 : 0
-    ]
-    const nextSeriesType = actions.switchSeriesType([correct, state.numberOfDigits])
+    const latestTrialLog = {
+      trialNum: state.trialNum,
+      seriesNum: state.seriesNum,
+      seriesType: state.seriesType,
+      progression: state.presentation,
+      response: state.inputBox,
+      numberOfDigits: state.numberOfDigits,
+      correct: correct ? 1 : 0,
+    }
+    const nextSeriesType = helpers.switchSeriesType(state.log[state.log.length - 1], latestTrialLog)
     state = {
       ...state,
       trialNum: state.trialNum + 1,
@@ -70,35 +73,40 @@ const actions = {
       readonly: "readonly",
       seriesNum: state.seriesNum + (nextSeriesType != state.seriesType ? 1 : 0),
     }
-    // 終了条件
     if (state.trialNum > settings.trials) {
-      return { ...state, result: "練習終わり"}
-    } else {
-      setTimeout(actions.startMemorize, 3000)
-      return state
+      return { ...state, presentation: "end", result: "練習終わり"}
     }
-  },
-  switchSeriesType: args => state => {
-    const correct = args[0]
-    const latestNoD = args[1]
-    if (state.trialNum == 1) {
-      return state.seriesType
-    }
-    // 文字数が0にならないようにする
-    if (latestNoD == 1) {
-      return 1
-    }
-    if (state.seriesType == 1 && state.log[state.log.length - 1][5] == 0 && !correct) {
-      return -1
-    } else if (state.seriesType == -1 && state.log[state.log.length - 1][5] == 1 && correct) {
-      return 1
-    } else {
-      return state.seriesType
-    }
+    setTimeout(actions.startMemorize, 3000)
+    return state
   },
   updateInput: e => state => {
     return { ...state, inputBox: e.target.value }
-  }
+  },
+}
+
+// データ処理を担当する関数群
+const helpers = {
+  createProgression: length => {
+    const max = 10 ** length
+    const min = 10 ** (length - 1)
+    return String(Math.floor(Math.random() * (max - min) + min))
+  },
+  switchSeriesType: (latestSecondTrialLog, latestTrialLog) => {
+    if (latestTrialLog.trialNum == 1) {
+      return 1
+    }
+    // 文字数が0にならないようにする
+    if (latestTrialLog.numberOfDigits == 1) {
+      return 1
+    }
+    if (latestTrialLog.seriesType == 1 && latestSecondTrialLog.correct == 0 && latestTrialLog.correct == 0) {
+      return -1
+    } else if (latestTrialLog.seriesType == -1 && latestSecondTrialLog.correct == 1 && latestTrialLog.correct == 1) {
+      return 1
+    } else {
+      return latestTrialLog.seriesType
+    }
+  },
 }
 
 const view = (state, actions) => (
@@ -121,6 +129,10 @@ const view = (state, actions) => (
     h("pre", {}, state.result)
   ])
 )
+
+// 開発者向け
+//const updown_helpers = helpers
+//module.exports = updown_helpers
 
 const main = app(state, actions, view, document.body)
 main.startMemorize()
