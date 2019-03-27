@@ -155,7 +155,11 @@ const helpers = {
     const successiveCorrectIndexes = helpers.IndexesOf(successiveCorrectArray, 2)
     // 2連続正答がない（上昇系列で起こりうる）ときは系列内第1試行より1つ少ない桁数を返すこととする
     if (successiveCorrectIndexes.length == 0) {
-      return thisSeries[0].numberOfDigits - 1
+      if (seriesType == 1) {
+        return thisSeries[0].numberOfDigits - 1
+      } else {
+        return 0
+      }
     }
     if (seriesType == 1) {
       return thisSeries[Math.max(...successiveCorrectIndexes) + 1].numberOfDigits
